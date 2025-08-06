@@ -9,31 +9,43 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Leaf, Shield, Award } from 'lucide-react'
+import { submitContactForm } from './actions/contact'
 
 export default function EmersonNaturalsWebsite() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    company: '',
-    message: ''
-  })
   const [isVisible, setIsVisible] = useState(false)
   const [openAccordion, setOpenAccordion] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   useEffect(() => {
     setIsVisible(true)
   }, [])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log('Form submitted:', formData)
+  const handleSubmit = async (formData: FormData) => {
+    setIsSubmitting(true)
+    setSubmitMessage(null)
+    
+    try {
+      const result = await submitContactForm(formData)
+      
+      setSubmitMessage({
+        type: result.success ? 'success' : 'error',
+        text: result.message
+      })
+      
+      if (result.success) {
+        // Reset form on success
+        const form = document.getElementById('contact-form') as HTMLFormElement
+        form?.reset()
+      }
+    } catch (error) {
+      setSubmitMessage({
+        type: 'error',
+        text: 'An error occurred. Please try again later.'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const scrollToContact = () => {
@@ -586,7 +598,7 @@ export default function EmersonNaturalsWebsite() {
           
           <Card className="shadow-2xl border-0 bg-gradient-to-b from-white to-stone-50">
             <CardContent className="p-8 md:p-12">
-              <form onSubmit={handleSubmit} className="space-y-8">
+              <form id="contact-form" action={handleSubmit} className="space-y-8">
                 <div className="grid md:grid-cols-2 gap-8">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-stone-700 font-semibold text-lg">Name *</Label>
@@ -595,8 +607,6 @@ export default function EmersonNaturalsWebsite() {
                       name="name"
                       type="text"
                       required
-                      value={formData.name}
-                      onChange={handleInputChange}
                       className="h-12 border-stone-300 focus:border-green-500 focus:ring-green-500 rounded-lg"
                     />
                   </div>
@@ -607,8 +617,6 @@ export default function EmersonNaturalsWebsite() {
                       name="email"
                       type="email"
                       required
-                      value={formData.email}
-                      onChange={handleInputChange}
                       className="h-12 border-stone-300 focus:border-green-500 focus:ring-green-500 rounded-lg"
                     />
                   </div>
@@ -620,8 +628,6 @@ export default function EmersonNaturalsWebsite() {
                     id="company"
                     name="company"
                     type="text"
-                    value={formData.company}
-                    onChange={handleInputChange}
                     className="h-12 border-stone-300 focus:border-green-500 focus:ring-green-500 rounded-lg"
                   />
                 </div>
@@ -633,19 +639,29 @@ export default function EmersonNaturalsWebsite() {
                     name="message"
                     required
                     rows={6}
-                    value={formData.message}
-                    onChange={handleInputChange}
                     className="border-stone-300 focus:border-green-500 focus:ring-green-500 rounded-lg resize-none"
                   />
                 </div>
+                
+                {/* Success/Error Message */}
+                {submitMessage && (
+                  <div className={`p-4 rounded-lg ${
+                    submitMessage.type === 'success' 
+                      ? 'bg-green-50 border border-green-200 text-green-800' 
+                      : 'bg-red-50 border border-red-200 text-red-800'
+                  }`}>
+                    {submitMessage.text}
+                  </div>
+                )}
                 
                 <div className="text-center pt-4">
                   <Button 
                     type="submit"
                     size="lg"
-                    className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-16 py-4 text-lg font-semibold rounded-full shadow-xl hover:shadow-green-500/25 transition-all duration-300 transform hover:scale-105"
+                    disabled={isSubmitting}
+                    className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-16 py-4 text-lg font-semibold rounded-full shadow-xl hover:shadow-green-500/25 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    Send Message
+                    {isSubmitting ? 'Sending...' : 'Send Message'}
                   </Button>
                 </div>
               </form>
